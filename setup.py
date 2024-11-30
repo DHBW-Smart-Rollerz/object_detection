@@ -36,7 +36,7 @@ setup(
     tests_require=["pytest"],
     entry_points={
         "console_scripts": [
-            f"ros2_example_node = {package_name}.ros2_example_node:main",
+            f"object_detection_node = {package_name}.object_detection_node:main",
         ],
     },
 )

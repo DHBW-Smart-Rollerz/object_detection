@@ -1,3 +1,5 @@
+#! /usr/bin/env python3
+
 # Copyright (c) 2024 Smart Rollerz e.V. All rights reserved.
 
 import cv2
@@ -11,7 +13,7 @@ from sensor_msgs.msg import Image
 from std_msgs.msg import Float32MultiArray, UInt32
 from timing.timer import Timer
 
-from object_detection.object_detection.detector import SSD
+from object_detection.detector import SSD
 
 IMAGE_TOPIC = "/camera/image/undistorted"
 OBJECT_TOPIC = "/object_detection/object"
@@ -81,11 +83,11 @@ class ObjectDetectionNode(Node):
 
     def init_properties(self):
         """Set properties from parameters."""
-        for param in self.param.keys():
+        for param in self.param:
             setattr(
                 self.__class__,
-                param,
-                property(lambda self, param=param: self.get_parameter(param).value),
+                param.name,
+                property(lambda self, n=param.name: self.get_parameter(n).value),
             )
 
     def loop(self):

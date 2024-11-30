@@ -5,18 +5,18 @@ import os
 import cv2
 import numpy as np
 import rclpy
+import rclpy.logging
 import yaml
-from camera_preprocessing.camera_preprocessing.transformation.birds_eyed_view import (
+from camera_preprocessing.transformation.birds_eyed_view import (
     BirdseyedviewTransformation,
 )
-from camera_preprocessing.camera_preprocessing.transformation.coordinate_transform import (
-    CoordinateTransform,
-)
-from detect import detect_ssd, preload_model
+from camera_preprocessing.transformation.coordinate_transform import CoordinateTransform
 from PIL import Image
 from pycoral.adapters import common
+from rclpy.logging import get_logger
 
-from object_detection.object_detection.detector import *
+from object_detection.detector import *
+from object_detection.detector.detect import detect_ssd, preload_model
 
 
 class SSD:
@@ -25,9 +25,12 @@ class SSD:
     def __init__(self, parent: object):
         """Initialize the SSD object detection class."""
         self.parent = parent
+        self.logger = get_logger("ssd")
+
         self.birdseyedview = BirdseyedviewTransformation(debug=self.parent.debug)
         self.coordinate_transform = CoordinateTransform()
         self.detection_list = np.zeros(11)
+
         self.load_config(self.parent.config_path)
 
         # Paths
@@ -49,13 +52,13 @@ class SSD:
             None
         """
         if not os.path.exists(config_path):
-            rclpy.get_logger().error(f"Error: The file '{config_path}' does not exist.")
+            self.logger.error(f"Error: The file '{config_path}' does not exist.")
             return None
 
         with open(config_path, "r") as file:
             self.config = yaml.safe_load(file)
 
-        rclpy.get_logger().info(f"Configuration file loaded: {self.config}")
+        self.logger.info(f"Configuration file loaded: {self.config}")
 
     def load_model(self):
         """Loads model."""

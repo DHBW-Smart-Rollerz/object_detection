@@ -9,7 +9,7 @@ from pycoral.adapters import detect
 from pycoral.utils.dataset import read_label_file
 from pycoral.utils.edgetpu import make_interpreter
 
-from object_detection.object_detection.detector import *
+from object_detection.detector import *
 
 
 def draw_objects(draw, objs, labels):
@@ -57,7 +57,7 @@ def detect_ssd(
     scale,
     threshold=0.6,
     debug=False,
-    labels_file=os.join(PKG_PATH, "models/smarty_labels.txt"),
+    labels_file=os.path.join(PKG_PATH, "models/smarty_labels.txt"),
 ):
     """Detect objects in the image."""
     # get labels
