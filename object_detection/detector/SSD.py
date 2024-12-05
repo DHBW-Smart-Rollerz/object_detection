@@ -31,7 +31,7 @@ class SSD:
         self.coordinate_transform = CoordinateTransform()
         self.detection_list = np.zeros(11)
 
-        self.load_config(self.parent.config_path)
+        self.load_config(os.path.join(PKG_PATH, "config/model.yaml"))
 
         # Paths
         self.labels_path = os.path.join(PKG_PATH, self.config.get("labels_path"))

@@ -1,5 +1,6 @@
 # Copyright (c) 2024 Smart Rollerz e.V. All rights reserved.
 
 model_path: "models/run1_tflite_edgetpu.tflite"
+# model_path: "models/smartrollerz_train_short_edgetpu.tflite"
 labels_path: "models/smarty_labels.txt"
 detection_size: [640, 640]
