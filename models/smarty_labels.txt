@@ -1,0 +1,11 @@
+car
+pedestrian
+stop-sign
+crosswalk-sign
+parking-sign
+thirty-sign
+no-thirty-sign
+go-left-sign
+go-right-sign
+intersection-right-of-way-sign
+intersaction-grant-sign

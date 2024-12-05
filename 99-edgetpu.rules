@@ -1,0 +1,3 @@
+#Bus 004 Device 006: ID 1a6e:089a Global Unichip Corp
+
+SUBSYSTEM=="usb", ATTR{idVendor}=="1a6e", ATTR{idProduct}=="089a", MODE="0666"
