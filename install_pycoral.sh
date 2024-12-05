@@ -26,7 +26,7 @@ wget https://github.com/feranick/libedgetpu/releases/download/16.0TF2.17.1-1/lib
 wget https://github.com/feranick/pycoral/releases/download/2.0.3TF2.17.1/pycoral-2.0.3-cp312-cp312-linux_x86_64.whl
 wget https://github.com/feranick/TFlite-builds/releases/download/v2.17.1/tflite_runtime-2.17.1-cp312-cp312-linux_x86_64.whl
 
-sudp dpkg -i libedgetpu1-max_16.0tf2.17.1-1.ubuntu24.04_amd64.deb
+sudo dpkg -i libedgetpu1-max_16.0tf2.17.1-1.ubuntu24.04_amd64.deb
 pip install tflite_runtime-2.17.1-cp312-cp312-linux_x86_64.whl
 pip install pycoral-2.0.3-cp312-cp312-linux_x86_64.whl
 
@@ -36,7 +36,7 @@ rm -rf temp
 
 # Cd script dir
 cd $DIR
-cp 99-edgetpu.rules /etc/udev/rules.d/
+sudo cp 99-edgetpu.rules /etc/udev/rules.d/
 sudo udevadm control --reload-rules && sudo udevadm trigger
 
 echo "PyCoral installed successfully"
