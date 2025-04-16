@@ -10,7 +10,7 @@ from ament_index_python import get_package_share_directory
 from rclpy.node import Node
 from rclpy.qos import QoSProfile
 from sensor_msgs.msg import Image
-from std_msgs.msg import Float32MultiArray, UInt32
+from std_msgs.msg import Float32MultiArray, UInt32, String
 from timing.timer import Timer
 
 from object_detection.detector import SSD
@@ -78,7 +78,10 @@ class ObjectDetectionNode(Node):
             Image, self.image_topic, self.camera_image_callback, 10
         )
         self.state_machine_subscriber = self.create_subscription(
-            UInt32, self.state_machine_topic, self.state_machine_callback, 10
+            String,
+            self.state_machine_topic,
+            self.state_machine_callback,
+            10,
         )
 
     def init_properties(self):
