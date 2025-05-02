@@ -11,6 +11,7 @@ from camera_preprocessing.transformation.birds_eyed_view import (
     BirdseyedviewTransformation,
 )
 from camera_preprocessing.transformation.coordinate_transform import CoordinateTransform
+from smarty_utils.smarty_utils.enums import OBJECTS, SIGNS
 from PIL import Image
 from pycoral.adapters import common
 from rclpy.logging import get_logger
@@ -76,39 +77,58 @@ class SSD:
         """
         # vehicle
         if class_id == 0:
-            return 2
+            return OBJECTS.VEHICLE.value
         # pedestrian
-        if class_id == 1:
-            return 10
+        elif class_id == 1:
+            return OBJECTS.PEDESTRIAN.value
         # stop-sign
         elif class_id == 2:
-            return 1
+            return SIGNS.STOP.value
         # crosswalk-sign
         elif class_id == 3:
-            return 9
+            return SIGNS.CROSSWALK.value
         # parking-sign
         elif class_id == 4:
-            return 14
+            return SIGNS.PARKING.value
         # thirty-sign
         elif class_id == 5:
-            return 7
+            return SIGNS.SPEED_LIMIT_30.value
         # no-thirty-sign
         elif class_id == 6:
-            return 8
+            return SIGNS.SPEED_LIMIT_30_LIFTED.value
         # go-left-sign
         elif class_id == 7:
-            return 15
+            return SIGNS.TURN_LEFT.value
         # go-right-sign
         elif class_id == 8:
-            return 16
+            return SIGNS.TURN_RIGHT.value
         # intersection-right-of-way-sign
         elif class_id == 9:
-            return 17
+            return SIGNS.PRIORITY.value
         # intersection-grant-sign
         elif class_id == 10:
-            return 18
+            return SIGNS.GIVE_WAY.value
+        #expressway-start
+        elif class_id == 11:
+            return SIGNS.FAST_TRACK.value
+        #expressway-end
+        elif class_id == 12:
+            return SIGNS.FAST_TRACK_LIFTED.value
+        #barred-area
+        elif class_id == 13:
+            return SIGNS.PRIORITY_ONCOMING_TRAFFIC.value
+        #Pedestrian-island-right
+        elif class_id == 14:
+            return
+        #no-passing-start
+        elif class_id == 15:
+            return SIGNS.NO_OVERTAKING.value
+        #no-passing-end
+        elif class_id == 16:
+            return SIGNS.NO_OVERTAKING_LIFTED.value
         else:
             return 0
+
 
     def get_result(
         self,
