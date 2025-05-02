@@ -11,10 +11,10 @@ from camera_preprocessing.transformation.birds_eyed_view import (
     BirdseyedviewTransformation,
 )
 from camera_preprocessing.transformation.coordinate_transform import CoordinateTransform
-from smarty_utils.smarty_utils.enums import OBJECTS, SIGNS
 from PIL import Image
 from pycoral.adapters import common
 from rclpy.logging import get_logger
+from smarty_utils.enums import OBJECTS, SIGNS
 
 from object_detection.detector import *
 from object_detection.detector.detect import detect_ssd, preload_model
@@ -30,7 +30,7 @@ class SSD:
 
         self.birdseyedview = BirdseyedviewTransformation(debug=self.parent.debug)
         self.coordinate_transform = CoordinateTransform()
-        self.detection_list = np.zeros(11)
+        self.detection_list = np.zeros(17)
 
         self.load_config(os.path.join(PKG_PATH, "config/model.yaml"))
 
@@ -108,27 +108,26 @@ class SSD:
         # intersection-grant-sign
         elif class_id == 10:
             return SIGNS.GIVE_WAY.value
-        #expressway-start
+        # expressway-start
         elif class_id == 11:
             return SIGNS.FAST_TRACK.value
-        #expressway-end
+        # expressway-end
         elif class_id == 12:
             return SIGNS.FAST_TRACK_LIFTED.value
-        #barred-area
+        # barred-area
         elif class_id == 13:
             return SIGNS.PRIORITY_ONCOMING_TRAFFIC.value
-        #Pedestrian-island-right
+        # Pedestrian-island-right
         elif class_id == 14:
             return
-        #no-passing-start
+        # no-passing-start
         elif class_id == 15:
             return SIGNS.NO_OVERTAKING.value
-        #no-passing-end
+        # no-passing-end
         elif class_id == 16:
             return SIGNS.NO_OVERTAKING_LIFTED.value
         else:
             return 0
-
 
     def get_result(
         self,
