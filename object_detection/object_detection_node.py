@@ -1,20 +1,16 @@
 #! /usr/bin/env python3
 
-# Copyright (c) 2024 Smart Rollerz e.V. All rights reserved.
-
-from re import A
+# Copyright (c) 2025 Smart Rollerz e.V. All rights reserved.
 
 import cv2
 import cv_bridge
 import numpy as np
 import rclpy
 import sensor_msgs
-from ament_index_python import get_package_share_directory
-from rclpy.node import Node
 from rclpy.qos import QoSProfile
 from smarty_utils.enums import NodeState
 from smarty_utils.smarty_node import SmartyNode
-from std_msgs.msg import Float32MultiArray, String, UInt32
+from std_msgs.msg import Float32MultiArray
 from sympy import Q
 from timing.timer import Timer
 
