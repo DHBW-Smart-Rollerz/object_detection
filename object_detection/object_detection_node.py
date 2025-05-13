@@ -10,7 +10,7 @@ from ament_index_python import get_package_share_directory
 from rclpy.node import Node
 from rclpy.qos import QoSProfile
 from sensor_msgs.msg import Image
-from std_msgs.msg import Float32MultiArray, UInt32, String
+from std_msgs.msg import Float32MultiArray, String, UInt32
 from timing.timer import Timer
 
 from object_detection.detector import SSD
@@ -104,34 +104,33 @@ class ObjectDetectionNode(Node):
             )
         Timer().print()
 
+        # Create empty message
+        obj_msg = Float32MultiArray()
+        sign_msg = Float32MultiArray()
+        obj_msg.data = []
+        sign_msg.data = []
+
         if self.start_mode_state == 2:
             self.start_ctr += 1
             if self.start_ctr > 150:
                 self.start_mode_state = 3
         else:
-            #If an object (pedestrian or car) is detected publish it to the object topic
+            # If an object (pedestrian or car) is detected publish it to the object topic
             if result and mapped_objects:
-                publish_msg = self.create_float32_multi_array([mapped_objects[0]])
-                if publish_msg:
-                    self.get_logger().debug(result)
-                    self.object_detection_object_publisher.publish(publish_msg)
-            # Otherwise publish an empty message
-            else:
-                empty_msg = Float32MultiArray()
-                empty_msg.data = []
-                self.object_detection_object_publisher.publish(empty_msg)
-                
-            #If a sign is detected publish it to the sign topic
+                obj_msg = self.create_float32_multi_array([mapped_objects[0]])
+
+            # If a sign is detected publish it to the sign topic
             if result and mapped_signs:
-                publish_msg = self.create_float32_multi_array([mapped_signs[0]])
-                if publish_msg:
-                    self.get_logger().debug(result)
-                    self.object_detection_sign_publisher.publish(publish_msg)
-            #Otherwise publisch an empty list
-            else:
-                empty_msg = Float32MultiArray()
-                empty_msg.data = []  # Empty list
-                self.object_detection_sign_publisher.publish(empty_msg)
+                sign_msg = self.create_float32_multi_array([mapped_signs[0]])
+
+            # Publish the messages
+            self.object_detection_object_publisher.publish(obj_msg)
+            self.object_detection_sign_publisher.publish(sign_msg)
+
+            if obj_msg.data:
+                self.get_logger().info(f"Object detected: {obj_msg.data}")
+            if sign_msg.data:
+                self.get_logger().info(f"Sign detected: {sign_msg.data}")
 
         if self.debug:
             self.debug_publisher.publish(
