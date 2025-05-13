@@ -11,7 +11,6 @@ from rclpy.qos import QoSProfile
 from smarty_utils.enums import NodeState
 from smarty_utils.smarty_node import SmartyNode
 from std_msgs.msg import Float32MultiArray
-from sympy import Q
 from timing.timer import Timer
 
 from object_detection.detector import SSD
