@@ -1,0 +1,17 @@
+car
+pedestrian
+stop-sign
+crosswalk-sign
+parking-sign
+thirty-sign
+no-thirty-sign
+go-left-sign
+go-right-sign
+intersection-right-of-way-sign
+intersection-grant-sign
+expressway-start
+expressway-end
+barred-area
+pedestrian-island-right
+no-passing-start
+no-passing-end
