@@ -117,11 +117,11 @@ class ObjectDetectionNode(Node):
         else:
             # If an object (pedestrian or car) is detected publish it to the object topic
             if result and mapped_objects:
-                obj_msg = self.create_float32_multi_array([mapped_objects[0]])
+                obj_msg = self.create_float32_multi_array([mapped_objects])
 
             # If a sign is detected publish it to the sign topic
             if result and mapped_signs:
-                sign_msg = self.create_float32_multi_array([mapped_signs[0]])
+                sign_msg = self.create_float32_multi_array([mapped_signs])
 
             # Publish the messages
             self.object_detection_object_publisher.publish(obj_msg)
@@ -148,6 +148,9 @@ class ObjectDetectionNode(Node):
             Float32MultiArray message
         """
         flat_objects = []
+        # Flatten the list of objects
+        objects = objects[0]
+        print(objects)
         for obj in objects:
             flat_objects.extend(
                 [
