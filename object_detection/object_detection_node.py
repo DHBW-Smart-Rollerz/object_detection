@@ -119,9 +119,9 @@ class ObjectDetectionNode(Node):
             else:
                 empty_msg = Float32MultiArray()
                 empty_msg.data = []
-                self.object_detection_sign_publisher.publish(empty_msg)
+                self.object_detection_object_publisher.publish(empty_msg)
                 
-            #If a sign is detected publish it to the object topic
+            #If a sign is detected publish it to the sign topic
             if result and mapped_signs:
                 publish_msg = self.create_float32_multi_array([mapped_signs[0]])
                 if publish_msg:
