@@ -2,15 +2,20 @@
 
 # Copyright (c) 2024 Smart Rollerz e.V. All rights reserved.
 
+from re import A
+
 import cv2
 import cv_bridge
 import numpy as np
 import rclpy
+import sensor_msgs
 from ament_index_python import get_package_share_directory
 from rclpy.node import Node
 from rclpy.qos import QoSProfile
-from sensor_msgs.msg import Image
+from smarty_utils.enums import NodeState
+from smarty_utils.smarty_node import SmartyNode
 from std_msgs.msg import Float32MultiArray, String, UInt32
+from sympy import Q
 from timing.timer import Timer
 
 from object_detection.detector import SSD
@@ -20,101 +25,86 @@ OBJECT_TOPIC = "/object_detection/object"
 SIGN_TOPIC = "/object_detection/sign"
 DEBUG_IMAGE_TOPIC = "/object_detection/debug/image"
 STATE_MACHINE_TOPIC = "/state_machine/debug/state"
-ACTIVE = True
+ACTIVE = NodeState.ACTIVE.value
 DT = 0.0002
 CONFIG_PATH = "config/model.yaml"
 
 
-class ObjectDetectionNode(Node):
+class ObjectDetectionNode(SmartyNode):
     """SSD object detection node."""
 
     def __init__(self):
         """Initialize the object detection node."""
-        super().__init__("ssd_node")
-        self.param = self.declare_parameters(
-            namespace="",
-            parameters=[
-                ("debug", False),
-                ("image_topic", IMAGE_TOPIC),
-                ("object_topic", OBJECT_TOPIC),
-                ("sign_topic", SIGN_TOPIC),
-                ("debug_image_topic", DEBUG_IMAGE_TOPIC),
-                ("state_machine_topic", STATE_MACHINE_TOPIC),
-                ("active", ACTIVE),
-                ("dt", DT),
-                ("config_path", CONFIG_PATH),
-            ],
+        super().__init__(
+            "object_detection_node",
+            "object_detection",
+            node_parameters={
+                # Subscriber topics
+                "image_subscriber": IMAGE_TOPIC,
+                # Publisher topics
+                "object_publisher": OBJECT_TOPIC,
+                "sign_publisher": SIGN_TOPIC,
+                "debug_img_publisher": DEBUG_IMAGE_TOPIC,
+                # Parameters
+                "config_path": CONFIG_PATH,
+                "dt": DT,
+                "state": ACTIVE,
+                "debug": False,
+            },
+            subscribed_topics={
+                "image_subscriber": (
+                    sensor_msgs.msg.Image,
+                    self.camera_image_callback,
+                    QoSProfile(depth=10),
+                ),
+            },
+            published_topics={
+                "object_publisher": (Float32MultiArray, QoSProfile(depth=10)),
+                "sign_publisher": (Float32MultiArray, QoSProfile(depth=10)),
+                "debug_img_publisher": (sensor_msgs.msg.Image, QoSProfile(depth=10)),
+            },
         )
-        self.init_properties()
-        self.init_pub_sub()
-
-        # Constants
-        self.package_path = get_package_share_directory("object_detection")
-
-        self.start_mode_state = 0
-        self.start_ctr = 0
-
-        self.state_machine_mode = None
         self.latest_image = None
 
         self.cv_bridge = cv_bridge.CvBridge()
         self.ssd = SSD.SSD(self)
 
         self.loop_timer = self.create_timer(self.dt, self.loop)
+        self.get_logger().info("🚀 Object detection node initialized.")
 
-    def init_pub_sub(self):
-        """Initialize publishers and subscribers."""
-        self.object_detection_object_publisher = self.create_publisher(
-            Float32MultiArray, self.object_topic, QoSProfile(depth=10)
-        )
-        self.object_detection_sign_publisher = self.create_publisher(
-            Float32MultiArray, self.sign_topic, QoSProfile(depth=10)
-        )
-        self.debug_publisher = self.create_publisher(
-            Image, self.debug_image_topic, QoSProfile(depth=10)
-        )
+    @property
+    def dt(self):
+        """Return the dt parameter."""
+        return self.get_parameter("dt").value
 
-        self.image_subscriber = self.create_subscription(
-            Image, self.image_topic, self.camera_image_callback, 10
-        )
-        self.state_machine_subscriber = self.create_subscription(
-            String,
-            self.state_machine_topic,
-            self.state_machine_callback,
-            10,
-        )
+    @property
+    def config_path(self):
+        """Return the config_path parameter."""
+        return self.get_parameter("config_path").value
 
-    def init_properties(self):
-        """Set properties from parameters."""
-        for param in self.param:
-            setattr(
-                self.__class__,
-                param.name,
-                property(lambda self, n=param.name: self.get_parameter(n).value),
-            )
+    def reset(self):
+        """Reset the node to its initial state."""
+        self.get_logger().warning("⚠️ Resetting the node ...")
+        self.latest_image = None
 
     def loop(self):
         """Perception loop."""
-        if self.latest_image is None:
-            return
-
-        with Timer(name="prediction_timer", filter_strength=40):
-            result, mapped_signs, mapped_objects, result_img = self.ssd.get_result(
-                self.latest_image, debug=self.debug
-            )
-        Timer().print()
-
         # Create empty message
         obj_msg = Float32MultiArray()
         sign_msg = Float32MultiArray()
         obj_msg.data = []
         sign_msg.data = []
 
-        if self.start_mode_state == 2:
-            self.start_ctr += 1
-            if self.start_ctr > 150:
-                self.start_mode_state = 3
-        else:
+        if self.latest_image is None:
+            return
+
+        if self.active:
+            with Timer(name="prediction_timer", filter_strength=40):
+                result, mapped_signs, mapped_objects, result_img = self.ssd.get_result(
+                    self.latest_image, debug=self._debug
+                )
+            Timer().print()
+
             # If an object (pedestrian or car) is detected publish it to the object topic
             if result and mapped_objects:
                 obj_msg = self.create_float32_multi_array([mapped_objects])
@@ -123,19 +113,23 @@ class ObjectDetectionNode(Node):
             if result and mapped_signs:
                 sign_msg = self.create_float32_multi_array([mapped_signs])
 
-            # Publish the messages
-            self.object_detection_object_publisher.publish(obj_msg)
-            self.object_detection_sign_publisher.publish(sign_msg)
-
-            if obj_msg.data:
-                self.get_logger().info(f"Object detected: {obj_msg.data}")
-            if sign_msg.data:
-                self.get_logger().info(f"Sign detected: {sign_msg.data}")
-
-        if self.debug:
-            self.debug_publisher.publish(
-                self.cv_bridge.cv2_to_imgmsg(result_img, encoding="rgb8")
+            if self._debug:
+                self.debug_img_publisher.publish(
+                    self.cv_bridge.cv2_to_imgmsg(result_img, encoding="rgb8")
+                )
+        else:
+            self.get_logger().info(
+                "🚫 Node is not active. No object detection performed."
             )
+
+        # Publish the messages
+        self.object_publisher.publish(obj_msg)
+        self.sign_publisher.publish(sign_msg)
+
+        if obj_msg.data:
+            self.get_logger().info(f"Object detected: {obj_msg.data}")
+        if sign_msg.data:
+            self.get_logger().info(f"Sign detected: {sign_msg.data}")
 
     def create_float32_multi_array(self, objects: list) -> Float32MultiArray:
         """
@@ -166,35 +160,18 @@ class ObjectDetectionNode(Node):
         float_array_msg.data = flat_objects
         return float_array_msg
 
-    def camera_image_callback(self, image_msg: Image):
+    def camera_image_callback(self, image_msg: sensor_msgs.msg.Image):
         """
         Callback for camera image.
 
         Arguments:
             image_msg -- Image message
         """
-        if not self.active:
-            return
         current_image = np.frombuffer(image_msg.data, dtype=np.uint8).reshape(
             (image_msg.height, image_msg.width)
         )
         current_image = cv2.cvtColor(current_image, cv2.COLOR_GRAY2BGR)
         self.latest_image = current_image
-
-    def state_machine_callback(self, state: UInt32):
-        """
-        Callback for state machine.
-
-        Arguments:
-            state -- UInt32 message
-        """
-        if not self.active:
-            return
-        self.state_machine_mode = state.data
-        if self.start_mode_state == 0 and state.data == 10:
-            self.start_mode_state = 1
-        if self.start_mode_state == 1 and state.data == 11:
-            self.start_mode_state = 2
 
 
 def main(args=None):

@@ -28,7 +28,7 @@ class SSD:
         self.parent = parent
         self.logger = get_logger("ssd")
 
-        self.birdseyedview = BirdseyedviewTransformation(debug=self.parent.debug)
+        self.birdseyedview = BirdseyedviewTransformation(debug=self.parent._debug)
         self.coordinate_transform = CoordinateTransform()
         self.detection_list = np.zeros(17)
 

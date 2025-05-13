@@ -3,11 +3,10 @@
 object_detection_node:
   ros__parameters:
     debug: False
-    image_topic: "/camera/image/undistorted"
-    object_topic: "/object_detection/object"
-    sign_topic: "/object_detection/sign"
-    debug_image_topic: "/object_detection/debug/image"
-    state_machine_topic: "/state_machine/debug/state"
-    active: True
+    image_subscriber: "/camera/image/undistorted"
+    object_publisher: "/object_detection/object"
+    sign_publisher: "/object_detection/sign"
+    debug_img_publisher: "/object_detection/debug/image"
+    state: 0 # 0: inactive, 1: active
     dt: 0.0002
     config_path: "config/model.yaml"
