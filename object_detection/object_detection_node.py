@@ -109,17 +109,29 @@ class ObjectDetectionNode(Node):
             if self.start_ctr > 150:
                 self.start_mode_state = 3
         else:
+            #If an object (pedestrian or car) is detected publish it to the object topic
             if result and mapped_objects:
                 publish_msg = self.create_float32_multi_array([mapped_objects[0]])
                 if publish_msg:
                     self.get_logger().debug(result)
                     self.object_detection_object_publisher.publish(publish_msg)
-
+            # Otherwise publish an empty message
+            else:
+                empty_msg = Float32MultiArray()
+                empty_msg.data = []
+                self.object_detection_sign_publisher.publish(empty_msg)
+                
+            #If a sign is detected publish it to the object topic
             if result and mapped_signs:
                 publish_msg = self.create_float32_multi_array([mapped_signs[0]])
                 if publish_msg:
                     self.get_logger().debug(result)
                     self.object_detection_sign_publisher.publish(publish_msg)
+            #Otherwise publisch an empty list
+            else:
+                empty_msg = Float32MultiArray()
+                empty_msg.data = []  # Empty list
+                self.object_detection_sign_publisher.publish(empty_msg)
 
         if self.debug:
             self.debug_publisher.publish(
