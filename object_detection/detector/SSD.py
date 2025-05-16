@@ -32,15 +32,19 @@ class SSD:
         self.coordinate_transform = CoordinateTransform()
         self.detection_list = np.zeros(17)
 
-        self.load_config(os.path.join(PKG_PATH, "config/model.yaml"))
+        self.load_config(os.path.join(PKG_PATH, self.parent.config_path))
 
         # Paths
         self.labels_path = os.path.join(PKG_PATH, self.config.get("labels_path"))
         self.model_path = os.path.join(PKG_PATH, self.config.get("model_path"))
+        
+        # Initialize thresholds - these will be set by the parent node
+        self.overall_threshold = 0.6  # Default, will be overridden
+        self.confidence_thresholds = {}  # Will be populated by the parent node
 
         # Load model
         self.model = self.load_model()
-        print(self.detection_list)
+        self.logger.info("🔍 SSD object detector initialized")
 
     def load_config(self, config_path: str):
         """
@@ -134,7 +138,7 @@ class SSD:
         image: np.ndarray,
         debug=True,
     ):
-        """Calculates the average of an image and return the result with a bias."""
+        """Process image and return detected objects using configured thresholds."""
         # Convert NumPy array to PIL Image
         img = Image.fromarray(image)
         initial_image_size = img.size
@@ -150,21 +154,29 @@ class SSD:
         # Resize the image to the expected input size of the model
         resized_img = img.resize((detection_width, detection_height), Image.BILINEAR)
 
-        # prepare image for object detection
+        # Prepare image for object detection
         _, scale = common.set_resized_input(
             self.model,
             resized_img.size,
             lambda size: resized_img.resize(size, Image.BILINEAR),
         )
 
-        # detect object with SSD MobileNet V2
+        # Log thresholds in debug mode
+        if debug:
+            self.logger.debug(f"Using overall threshold: {self.overall_threshold}")
+            self.logger.debug(f"Using class thresholds: {self.confidence_thresholds}")
+
+        # Detect objects with SSD MobileNet V2 using configured thresholds
         objects, result_img = detect_ssd(
             image=resized_img,
             model=self.model,
             scale=scale,
+            threshold=self.overall_threshold,
+            confidence_thresholds=self.confidence_thresholds,
             debug=debug,
             labels_file=self.labels_path,
         )
+
 
         ######################
         # FOR MANUAL DEBUGGING

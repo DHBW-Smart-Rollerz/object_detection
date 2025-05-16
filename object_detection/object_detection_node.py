@@ -45,6 +45,27 @@ class ObjectDetectionNode(SmartyNode):
                 "dt": DT,
                 "state": ACTIVE,
                 "debug": False,
+                # Overall threshold
+                "detection_threshold": 0.6,
+
+                # Individual class thresholds - defined explicitly
+                "threshold_vehicle": 0.4,                     # class_id 0
+                "threshold_pedestrian": 0.4,                 # class_id 1
+                "threshold_stop_sign": 0.6,                  # class_id 2
+                "threshold_crosswalk_sign": 0.5,              # class_id 3
+                "threshold_parking_sign": 0.6,                # class_id 4
+                "threshold_thirty_sign": 0.6,                 # class_id 5
+                "threshold_no_thirty_sign": 0.6,              # class_id 6
+                "threshold_go_left_sign": 0.3,                # class_id 7
+                "threshold_go_right_sign": 0.3,               # class_id 8
+                "threshold_intersection_right_of_way_sign": 0.4, # class_id 9
+                "threshold_intersection_grant_sign": 0.4,     # class_id 10
+                "threshold_expressway_start": 0.5,            # class_id 11
+                "threshold_expressway_end": 0.5,              # class_id 12
+                "threshold_barred_area": 0.5,                 # class_id 13
+                "threshold_pedestrian_island_right": 0.5,     # class_id 14
+                "threshold_no_passing_start": 0.5,            # class_id 15
+                "threshold_no_passing_end": 0.5,              # class_id 16
             },
             subscribed_topics={
                 "image_subscriber": (
@@ -59,13 +80,98 @@ class ObjectDetectionNode(SmartyNode):
                 "debug_img_publisher": (sensor_msgs.msg.Image, QoSProfile(depth=10)),
             },
         )
+        
+        # Define class_id to parameter name mapping for runtime updates
+        self.class_mappings = {
+            0: "threshold_vehicle",
+            1: "threshold_pedestrian",
+            2: "threshold_stop_sign",
+            3: "threshold_crosswalk_sign",
+            4: "threshold_parking_sign",
+            5: "threshold_thirty_sign",
+            6: "threshold_no_thirty_sign",
+            7: "threshold_go_left_sign",
+            8: "threshold_go_right_sign",
+            9: "threshold_intersection_right_of_way_sign",
+            10: "threshold_intersection_grant_sign",
+            11: "threshold_expressway_start",
+            12: "threshold_expressway_end",
+            13: "threshold_barred_area",
+            14: "threshold_pedestrian_island_right",
+            15: "threshold_no_passing_start",
+            16: "threshold_no_passing_end",
+        }
+        
+        # Create confidence thresholds dictionary for the SSD detector
+        self.confidence_thresholds = {
+            0: self.get_parameter("threshold_vehicle").value,
+            1: self.get_parameter("threshold_pedestrian").value,
+            2: self.get_parameter("threshold_stop_sign").value,
+            3: self.get_parameter("threshold_crosswalk_sign").value,
+            4: self.get_parameter("threshold_parking_sign").value,
+            5: self.get_parameter("threshold_thirty_sign").value,
+            6: self.get_parameter("threshold_no_thirty_sign").value,
+            7: self.get_parameter("threshold_go_left_sign").value,
+            8: self.get_parameter("threshold_go_right_sign").value,
+            9: self.get_parameter("threshold_intersection_right_of_way_sign").value,
+            10: self.get_parameter("threshold_intersection_grant_sign").value,
+            11: self.get_parameter("threshold_expressway_start").value,
+            12: self.get_parameter("threshold_expressway_end").value,
+            13: self.get_parameter("threshold_barred_area").value,
+            14: self.get_parameter("threshold_pedestrian_island_right").value,
+            15: self.get_parameter("threshold_no_passing_start").value,
+            16: self.get_parameter("threshold_no_passing_end").value,
+        }
+        
         self.latest_image = None
-
         self.cv_bridge = cv_bridge.CvBridge()
+        
+        # Initialize the SSD detector
         self.ssd = SSD.SSD(self)
+        
+        # Pass thresholds to the SSD detector
+        self.ssd.overall_threshold = self.get_parameter("detection_threshold").value
+        self.ssd.confidence_thresholds = self.confidence_thresholds
+
+        # Register parameter change callback
+        self.add_on_set_parameters_callback(self.parameters_callback)
 
         self.loop_timer = self.create_timer(self.dt, self.loop)
         self.get_logger().info("🚀 Object detection node initialized.")
+        self.get_logger().info(f"Overall detection threshold: {self.detection_threshold}")
+        self.get_logger().info(f"Class-specific thresholds: {self.confidence_thresholds}")
+
+    def parameters_callback(self, params):
+        """Handle parameter updates during runtime."""
+        result = rclpy.parameter.SetParametersResult()
+        result.successful = True
+        
+        update_needed = False
+        
+        for param in params:
+            if param.name == "detection_threshold":
+                self.ssd.overall_threshold = param.value
+                self.get_logger().info(f"Updated overall detection threshold to {param.value}")
+                update_needed = True
+            else:
+                # Check if this is a class threshold parameter
+                for class_id, param_name in self.class_mappings.items():
+                    if param.name == param_name:
+                        self.confidence_thresholds[class_id] = param.value
+                        self.ssd.confidence_thresholds[class_id] = param.value
+                        self.get_logger().info(f"Updated threshold for class {class_id} to {param.value}")
+                        update_needed = True
+                        break
+        
+        if update_needed:
+            self.get_logger().info(f"Updated confidence thresholds: {self.confidence_thresholds}")
+        
+        return result
+
+    @property
+    def detection_threshold(self):
+        """Return the overall detection threshold parameter."""
+        return self.get_parameter("detection_threshold").value
 
     @property
     def dt(self):
@@ -81,6 +187,7 @@ class ObjectDetectionNode(SmartyNode):
         """Reset the node to its initial state."""
         self.get_logger().warning("⚠️ Resetting the node ...")
         self.latest_image = None
+
 
     def loop(self):
         """Perception loop."""
