@@ -14,6 +14,7 @@ from camera_preprocessing.transformation.coordinate_transform import CoordinateT
 from PIL import Image
 from pycoral.adapters import common
 from rclpy.logging import get_logger
+from smarty_utils.enums import OBJECTS, SIGNS
 
 from object_detection.detector import *
 from object_detection.detector.detect import detect_ssd, preload_model
@@ -27,19 +28,23 @@ class SSD:
         self.parent = parent
         self.logger = get_logger("ssd")
 
-        self.birdseyedview = BirdseyedviewTransformation(debug=self.parent.debug)
+        self.birdseyedview = BirdseyedviewTransformation(debug=self.parent._debug)
         self.coordinate_transform = CoordinateTransform()
-        self.detection_list = np.zeros(11)
+        self.detection_list = np.zeros(17)
 
-        self.load_config(os.path.join(PKG_PATH, "config/model.yaml"))
+        self.load_config(os.path.join(PKG_PATH, self.parent.config_path))
 
         # Paths
         self.labels_path = os.path.join(PKG_PATH, self.config.get("labels_path"))
         self.model_path = os.path.join(PKG_PATH, self.config.get("model_path"))
+        
+        # Initialize thresholds - these will be set by the parent node
+        self.overall_threshold = 0.6  # Default, will be overridden
+        self.confidence_thresholds = {}  # Will be populated by the parent node
 
         # Load model
         self.model = self.load_model()
-        print(self.detection_list)
+        self.logger.info("🔍 SSD object detector initialized")
 
     def load_config(self, config_path: str):
         """
@@ -76,37 +81,55 @@ class SSD:
         """
         # vehicle
         if class_id == 0:
-            return 2
+            return OBJECTS.VEHICLE.value
         # pedestrian
-        if class_id == 1:
-            return 10
+        elif class_id == 1:
+            return OBJECTS.PEDESTRIAN.value
         # stop-sign
         elif class_id == 2:
-            return 1
+            return SIGNS.STOP.value
         # crosswalk-sign
         elif class_id == 3:
-            return 9
+            return SIGNS.CROSSWALK.value
         # parking-sign
         elif class_id == 4:
-            return 14
+            return SIGNS.PARKING.value
         # thirty-sign
         elif class_id == 5:
-            return 7
+            return SIGNS.SPEED_LIMIT_30.value
         # no-thirty-sign
         elif class_id == 6:
-            return 8
+            return SIGNS.SPEED_LIMIT_30_LIFTED.value
         # go-left-sign
         elif class_id == 7:
-            return 15
+            return SIGNS.TURN_LEFT.value
         # go-right-sign
         elif class_id == 8:
-            return 16
+            return SIGNS.TURN_RIGHT.value
         # intersection-right-of-way-sign
         elif class_id == 9:
-            return 17
+            return SIGNS.PRIORITY.value
         # intersection-grant-sign
         elif class_id == 10:
-            return 18
+            return SIGNS.GIVE_WAY.value
+        # expressway-start
+        elif class_id == 11:
+            return SIGNS.FAST_TRACK.value
+        # expressway-end
+        elif class_id == 12:
+            return SIGNS.FAST_TRACK_LIFTED.value
+        # barred-area
+        elif class_id == 13:
+            return SIGNS.PRIORITY_ONCOMING_TRAFFIC.value
+        # Pedestrian-island-right
+        elif class_id == 14:
+            return
+        # no-passing-start
+        elif class_id == 15:
+            return SIGNS.NO_OVERTAKING.value
+        # no-passing-end
+        elif class_id == 16:
+            return SIGNS.NO_OVERTAKING_LIFTED.value
         else:
             return 0
 
@@ -115,7 +138,7 @@ class SSD:
         image: np.ndarray,
         debug=True,
     ):
-        """Calculates the average of an image and return the result with a bias."""
+        """Process image and return detected objects using configured thresholds."""
         # Convert NumPy array to PIL Image
         img = Image.fromarray(image)
         initial_image_size = img.size
@@ -131,21 +154,29 @@ class SSD:
         # Resize the image to the expected input size of the model
         resized_img = img.resize((detection_width, detection_height), Image.BILINEAR)
 
-        # prepare image for object detection
+        # Prepare image for object detection
         _, scale = common.set_resized_input(
             self.model,
             resized_img.size,
             lambda size: resized_img.resize(size, Image.BILINEAR),
         )
 
-        # detect object with SSD MobileNet V2
+        # Log thresholds in debug mode
+        if debug:
+            self.logger.debug(f"Using overall threshold: {self.overall_threshold}")
+            self.logger.debug(f"Using class thresholds: {self.confidence_thresholds}")
+
+        # Detect objects with SSD MobileNet V2 using configured thresholds
         objects, result_img = detect_ssd(
             image=resized_img,
             model=self.model,
             scale=scale,
+            threshold=self.overall_threshold,
+            confidence_thresholds=self.confidence_thresholds,
             debug=debug,
             labels_file=self.labels_path,
         )
+
 
         ######################
         # FOR MANUAL DEBUGGING
