@@ -1,0 +1,27 @@
+# Triggers the ROS graph update in smarty_workspace
+# (template: smarty_workspace/scripts/ros_graph/trigger-ros-graph.yaml)
+name: Trigger ROS Graph
+
+on:
+  push:
+    branches: [jazzy]
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+    - name: 🔑 Create App token
+      id: app-token
+      uses: actions/create-github-app-token@v2
+      with:
+        app-id: ${{ vars.ROS_GRAPH_APP_ID }}
+        private-key: ${{ secrets.ROS_GRAPH_APP_KEY }}
+        repositories: smarty_workspace
+
+    - name: 🕸️ Trigger ROS graph update
+      env:
+        GH_TOKEN: ${{ steps.app-token.outputs.token }}
+      run: |
+        gh api repos/DHBW-Smart-Rollerz/smarty_workspace/dispatches \
+          -f event_type=ros-graph \
+          -f "client_payload[repo]=${{ github.event.repository.name }}"
