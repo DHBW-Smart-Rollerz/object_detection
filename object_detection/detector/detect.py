@@ -4,7 +4,7 @@ import os
 
 import cv2
 import numpy as np
-from PIL import ImageDraw
+from PIL import ImageDraw, ImageFont
 from pycoral.adapters import detect
 from pycoral.utils.dataset import read_label_file
 from pycoral.utils.edgetpu import make_interpreter
@@ -14,12 +14,13 @@ from object_detection.detector import *
 
 def draw_objects(draw, objs, labels):
     """Draws the bounding box and label for each object."""
+    # font = ImageFont.truetype("arial.ttf", size = 12)
     # iterate over all detected objects
     for obj in objs:
         # get bounding box
         bbox = obj.bbox
         # draw bounding box
-        draw.rectangle([(bbox.xmin, bbox.ymin), (bbox.xmax, bbox.ymax)], outline="red")
+        draw.rectangle([(bbox.xmin, bbox.ymin), (bbox.xmax, bbox.ymax)], outline="red", width=4)
         # draw label
         draw.text(
             (bbox.xmin + 10, bbox.ymin + 10),

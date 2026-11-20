@@ -123,7 +123,7 @@ class SSD:
             return SIGNS.PRIORITY_ONCOMING_TRAFFIC.value
         # Pedestrian-island-right
         elif class_id == 14:
-            return
+            return SIGNS.PEDESTRIAN_ISLAND.value
         # no-passing-start
         elif class_id == 15:
             return SIGNS.NO_OVERTAKING.value
@@ -131,7 +131,7 @@ class SSD:
         elif class_id == 16:
             return SIGNS.NO_OVERTAKING_LIFTED.value
         else:
-            return 0
+            return None
 
     def get_result(
         self,
@@ -226,6 +226,9 @@ class SSD:
 
             self.detection_list[self.detection_list > 5] = 5
             new_id = self.get_corresponding_class_label(obj.id)
+            # Skip classes without a counterpart in OBJECTS/SIGNS
+            if new_id is None:
+                continue
             mapped_dict = {
                 "id": new_id,  # float(obj.id),
                 "score": obj.score,
